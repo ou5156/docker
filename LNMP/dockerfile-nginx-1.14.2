@@ -1,0 +1,64 @@
+# base image
+FROM centos:7
+
+# MAINTAINER
+MAINTAINER oby
+
+# install Dependency package
+RUN yum install -y gcc gcc-c++ make \
+    openssl-devel pcre pcre-devel gd  gd-devel libxslt-devel \
+    iproute net-tools telnet wget curl libxml2 libxml2-devel GeoIP GeoIP-devel && \
+    yum clean all && \
+    rm -rf /var/cache/yum/*
+
+# create nginx user
+RUN useradd -M -s /sbin/nologin www
+
+
+# download and install nginx-1.14
+RUN wget http://nginx.org/download/nginx-1.14.2.tar.gz && \
+    tar zxf nginx-1.14.2.tar.gz && \
+    cd nginx-1.14.2 && \
+    ./configure --prefix=/usr/local/nginx \
+    --user=www --group=www \
+    --with-http_ssl_module \
+    --with-http_v2_module \
+    --with-http_realip_module \
+    --with-http_image_filter_module \
+    --with-http_gunzip_module \
+    --with-http_gzip_static_module \
+    --with-http_secure_link_module \
+    --with-http_stub_status_module \
+    --with-stream \
+    --with-file-aio \
+    --with-ipv6 \
+    --with-http_addition_module \
+    --with-http_xslt_module \
+    --with-http_geoip_module \
+    --with-http_sub_module \
+    --with-http_dav_module \
+    --with-http_flv_module \
+    --with-http_mp4_module \
+    --with-http_auth_request_module \
+    --with-http_random_index_module \
+    --with-http_degradation_module \
+    --with-stream_ssl_module && \
+    make -j 4 && make install && \
+    mkdir -p /usr/local/nginx/conf/vhost && \
+    rm -rf /usr/local/nginx/html/* && \
+    echo "ok"  > /usr/local/nginx/html/index.html && \
+    cd / && rm -rf nginx-1.14.2*  && \
+    ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+
+# add nginx.conf
+COPY  nginx.conf /usr/local/nginx/conf/
+COPY  default.conf  /usr/local/nginx/conf/vhost/
+
+#set ENV
+ENV  PATH $PATH:/usr/local/nginx/sbin
+
+WORKDIR /usr/local/nginx
+
+EXPOSE  80
+
+CMD  ["nginx","-g","daemon off;"]
