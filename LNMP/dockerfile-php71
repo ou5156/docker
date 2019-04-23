@@ -1,0 +1,70 @@
+# Base image
+FROM centos:7
+
+# MAINTAINER
+MAINTAINER  oby
+
+# Install Dependency package
+RUN yum install epel-release -y && \
+    yum install -y gcc gcc-c++ make gd-devel libxml2-devel \
+    libcurl-devel libjpeg-devel libpng-devel openssl-devel \
+    libmcrypt-devel libxslt-devel libtidy-devel autoconf \
+    iproute net-tools telnet wget curl  unzip  && \
+    yum clean all  && \
+    rm -rf /var/cache/yum/*
+
+# Install php7.1
+COPY  php-7.1.27.tar.gz  /tmp/
+
+RUN cd /tmp && tar xf  php-7.1.27.tar.gz && \
+    cd  php-7.1.27 && \
+    ./configure --prefix=/usr/local/php \
+    --with-config-file-path=/usr/local/php/etc \
+    --with-config-file-scan-dir=/usr/local/php/etc/php.d \
+    --enable-fpm \
+    --enable-opcache --enable-static=no \
+    --with-mysql \
+    --with-mysqli \
+    --with-pdo-mysql \
+    --enable-phar \
+    --with-pear \
+    --enable-session \
+    --enable-sysvshm \
+    --with-tidy \
+    --with-openssl \
+    --with-zlib \
+    --with-curl \
+    --with-gd \
+    --enable-bcmath \
+    --with-jpeg-dir \
+    --with-png-dir \
+    --with-freetype-dir \
+    --with-iconv \
+    --enable-posix \
+    --enable-zip \
+    --enable-mbstring \
+    --with-mhash \
+    --with-mcrypt \
+    --enable-hash \
+    --enable-xml \
+    --enable-libxml \
+    --enable-debug=no && \
+    make -j 4 && make install && \
+    cp php.ini-production /usr/local/php/etc/php.ini && \
+    cp sapi/fpm/php-fpm.conf /usr/local/php/etc/php-fpm.conf && \
+    sed -i "90a \daemonize = no" /usr/local/php/etc/php-fpm.conf && \
+    mkdir /usr/local/php/log && \
+    cd /tmp && rm -rf php*  && \
+    ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+
+# ADD php-fpm.conf
+COPY php-fpm.conf  /usr/local/php/etc/
+
+# Set ENV
+ENV PATH $PATH:/usr/local/php/sbin
+
+WORKDIR /usr/local/php
+
+EXPOSE 9000
+
+CMD ["php-fpm"]
